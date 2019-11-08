@@ -1,0 +1,48 @@
+{
+  "name": "bilstm_bert",
+  "n_gpu": 1,
+  "arch": {
+    "type": "BiLSTMCRF",
+    "args": {
+      "embedder_type": "bert",
+      "bert_trainable": true,
+      "num_rnn_units": 200,
+      "num_rnn_layers": 2,
+      "dropout_rate": 0.5
+    }
+  },
+  "data_loader": {
+    "type": "BertSciercDataReader",
+    "args": {
+      "data_dir": "data/scierc",
+      "output_type": "bio",
+      "batch_size": 5,
+      "shuffle": true,
+      "small_data": false
+    }
+  },
+  "optimizer": {
+    "type": "Adam",
+    "args": {
+      "lr": 5e-5,
+      "weight_decay": 0
+    }
+  },
+  "lr_scheduler": {
+    "type": "WarmupLinearSchedule",
+    "args": {
+      "warmup_steps": 5,
+      "t_total": 100
+    }
+  },
+  "trainer": {
+    "epochs": 100,
+    "clip": 5,
+    "save_dir": "saved/",
+    "save_period": 1,
+    "verbosity": 2,
+    "monitor": "max f1-measure-overall",
+    "early_stop": 10,
+    "tensorboard": false
+  }
+}

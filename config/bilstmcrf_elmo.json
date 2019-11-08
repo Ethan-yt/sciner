@@ -1,0 +1,49 @@
+{
+  "name": "bilstm_elmo",
+  "n_gpu": 1,
+  "arch": {
+    "type": "BiLSTMCRF",
+    "args": {
+      "embedder_type": "elmo_and_glove",
+      "embedding_dim": 300,
+      "num_rnn_units": 200,
+      "num_rnn_layers": 2,
+      "dropout_rate": 0.5
+    }
+  },
+  "data_loader": {
+    "type": "SciercDataReader",
+    "args": {
+      "data_dir": "data/scierc",
+      "use_elmo": true,
+      "output_type": "bio",
+      "batch_size": 20,
+      "shuffle": true,
+      "small_data": false
+    }
+  },
+  "optimizer": {
+    "type": "Adam",
+    "args": {
+      "lr": 5e-2,
+      "weight_decay": 0
+    }
+  },
+  "lr_scheduler": {
+    "type": "StepLR",
+    "args": {
+      "step_size": 50,
+      "gamma": 0.1
+    }
+  },
+  "trainer": {
+    "epochs": 100,
+    "clip": 5,
+    "save_dir": "saved/",
+    "save_period": 1,
+    "verbosity": 2,
+    "monitor": "max f1-measure-overall",
+    "early_stop": 10,
+    "tensorboard": false
+  }
+}
