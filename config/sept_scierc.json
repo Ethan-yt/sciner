@@ -1,22 +1,21 @@
 {
-  "name": "span_ner_bert",
+  "name": "sept",
   "n_gpu": 1,
   "arch": {
-    "type": "SCIIE",
+    "type": "SEPT",
     "args": {
-      "embedder_type": "bert",
+      "embedder_type": "scibert",
       "embedding_dim": 768,
-      "feature_size": 200,
+      "feature_size": 500,
       "lexical_dropout": 0.1,
       "mlp_dropout": 0.1,
       "max_span_width": 12,
-      "spans_per_word": 0.4
+      "sampling_rate": 0.1
     }
   },
   "data_loader": {
-    "type": "BertSciercDataReader",
+    "type": "SpanDataReader",
     "args": {
-      "output_type": "span",
       "max_span_width": 12,
       "data_dir": "data/scierc",
       "batch_size": 5,
@@ -27,7 +26,7 @@
   "optimizer": {
     "type": "Adam",
     "args": {
-      "lr": 5e-5,
+      "lr": 2e-5,
       "weight_decay": 0
     }
   },
@@ -44,7 +43,7 @@
     "save_dir": "saved/",
     "save_period": 1,
     "verbosity": 2,
-    "monitor": "max fscore2",
+    "monitor": "max avg_fscore",
     "early_stop": 10,
     "tensorboard": false
   }

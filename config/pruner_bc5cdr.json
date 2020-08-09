@@ -1,21 +1,21 @@
 {
-  "name": "bilstm_bert",
+  "name": "pruner_bc5cdr",
   "n_gpu": 1,
   "arch": {
-    "type": "BiLSTMCRF",
+    "type": "PrePruner",
     "args": {
-      "embedder_type": "bert",
-      "bert_trainable": true,
-      "num_rnn_units": 200,
-      "num_rnn_layers": 2,
-      "dropout_rate": 0.5
+      "embedder_type": "biobert",
+      "feature_size": 200,
+      "mlp_dropout": 0.1,
+      "max_span_width": 12,
+      "keep_rate": 0.1
     }
   },
   "data_loader": {
-    "type": "BertSciercDataReader",
+    "type": "SpanDataReader",
     "args": {
-      "data_dir": "data/scierc",
-      "output_type": "bio",
+      "max_span_width": 7,
+      "data_dir": "data/bc5cdr",
       "batch_size": 5,
       "shuffle": true,
       "small_data": false
@@ -31,17 +31,17 @@
   "lr_scheduler": {
     "type": "WarmupLinearSchedule",
     "args": {
-      "warmup_steps": 5,
+      "warmup_steps": 10,
       "t_total": 100
     }
   },
   "trainer": {
-    "epochs": 100,
+    "epochs": 150,
     "clip": 5,
     "save_dir": "saved/",
     "save_period": 1,
     "verbosity": 2,
-    "monitor": "max f1-measure-overall",
+    "monitor": "max recall",
     "early_stop": 10,
     "tensorboard": false
   }

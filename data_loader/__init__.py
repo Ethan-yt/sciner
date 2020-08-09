@@ -6,5 +6,6 @@
 # @Email : yantan@bit.edu.cn
 # @File : __init__.py
 
-from .bert_data_reader import BertSciercDataReader
-from .scierc_data_reader import SciercDataReader
+from .span_data_reader import SpanDataReader
+from .span_data_reader import PrunedSpanDataReader
+from .conll_bio_data_reader import ConllBIODataReader

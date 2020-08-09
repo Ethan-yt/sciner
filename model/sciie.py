@@ -66,10 +66,10 @@ class SCIIE(Model):
                  spans_per_word: float,
                  lexical_dropout: float = 0.2,
                  mlp_dropout: float = 0.4,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None, embedder_type=None) -> None:
+                 embedder_type=None,
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(SCIIE, self).__init__(vocab, regularizer)
-        class_num = self.vocab.get_vocab_size('ner_span_labels') - 1
+        self.class_num = self.vocab.get_vocab_size('labels')
         word_embeddings = get_embeddings(embedder_type, self.vocab, embedding_dim, True)
         embedding_dim = word_embeddings.get_output_dim()
         self._text_field_embedder = word_embeddings
@@ -106,7 +106,7 @@ class SCIIE(Model):
 
         self._entity_scorer = torch.nn.Sequential(
             TimeDistributed(entity_feedforward),
-            TimeDistributed(torch.nn.Linear(entity_feedforward.get_output_dim(), class_num)))
+            TimeDistributed(torch.nn.Linear(entity_feedforward.get_output_dim(), self.class_num - 1)))
 
         self._max_span_width = max_span_width
         self._spans_per_word = spans_per_word
@@ -115,15 +115,14 @@ class SCIIE(Model):
         else:
             self._lexical_dropout = lambda x: x
 
-        self._metric1 = FBetaMeasure()
-        self._metric2 = NERF1Metric()
-        # initializer(self)
+        self._metric_all = FBetaMeasure()
+        self._metric_avg = NERF1Metric()
 
     @overrides
     def forward(self,  # type: ignore
                 text: Dict[str, torch.LongTensor],
                 spans: torch.IntTensor,
-                ner_span_labels: torch.IntTensor = None,
+                labels: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None, **kwargs) -> Dict[str, torch.Tensor]:
         # Shape: (batch_size, document_length, embedding_size)
         text_embeddings = self._lexical_dropout(self._text_field_embedder(text))
@@ -194,34 +193,33 @@ class SCIIE(Model):
 
         output_dict = {"top_spans": top_spans,
                        "predicted_named_entities": predicted_named_entities}
-        if ner_span_labels is not None:
+        if labels is not None:
             # Find the gold labels for the spans which we kept.
             # Shape: (batch_size, num_spans_to_keep, 1)
-            pruned_gold_labels = util.batched_index_select(ner_span_labels.unsqueeze(-1),
+            pruned_gold_labels = util.batched_index_select(labels.unsqueeze(-1),
                                                            top_span_indices,
                                                            flat_top_span_indices).squeeze(-1)
-            _, _, class_num = ne_scores.shape
-            negative_log_likelihood = F.cross_entropy(ne_scores.reshape(-1, class_num), pruned_gold_labels.reshape(-1))
+            negative_log_likelihood = F.cross_entropy(ne_scores.reshape(-1, self.class_num), pruned_gold_labels.reshape(-1))
 
             pruner_loss = F.binary_cross_entropy_with_logits(top_span_mention_scores.reshape(-1),
                                                              (pruned_gold_labels.reshape(-1) != 0).float())
             loss = negative_log_likelihood + pruner_loss
             output_dict["loss"] = loss
             output_dict["pruner_loss"] = pruner_loss
-            batch_size, _ = ner_span_labels.shape
-            all_scores = ne_scores.new_zeros([batch_size * num_spans, class_num])
+            batch_size, _ = labels.shape
+            all_scores = ne_scores.new_zeros([batch_size * num_spans, self.class_num])
             all_scores[:, 0] = 1
-            all_scores[flat_top_span_indices] = ne_scores.reshape(-1, class_num)
-            all_scores = all_scores.reshape([batch_size, num_spans, class_num])
-            self._metric1(all_scores, ner_span_labels)
-            self._metric2(all_scores, ner_span_labels)
+            all_scores[flat_top_span_indices] = ne_scores.reshape(-1, self.class_num)
+            all_scores = all_scores.reshape([batch_size, num_spans, self.class_num])
+            self._metric_all(all_scores, labels)
+            self._metric_avg(all_scores, labels)
         return output_dict
 
     @overrides
     def get_metrics(self, reset: bool = False, prefix=""):
-        metric = self._metric1.get_metric(reset)
-        metric2 = self._metric2.get_metric(reset)
-        metric.update({k + '2': v for k, v in metric2.items()})
+        metric = self._metric_all.get_metric(reset)
+        metric2 = self._metric_avg.get_metric(reset)
+        metric.update(metric2)
         return metric
 
     def _compute_named_entity_scores(self, span_embeddings: torch.FloatTensor) -> torch.Tensor:

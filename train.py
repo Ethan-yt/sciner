@@ -8,7 +8,6 @@ import data_loader as module_data
 import model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer
-from test import main as test
 from trainer import optimizer as custom_optimizer
 
 
@@ -16,7 +15,7 @@ def main(config):
     logger = config.get_logger('train')
 
     # setup data_loader instances
-    data_loader = config.initialize('data_loader', module_data)
+    data_loader = config.initialize('data_loader', module_data, embedder_type=config['arch']['args']['embedder_type'])
 
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch, vocab=data_loader.vocab)
@@ -36,10 +35,6 @@ def main(config):
                       lr_scheduler=lr_scheduler)
 
     trainer.train()
-    config.resume = config.save_dir / 'model_best.pth'
-    result = test(config, verbose=False)
-    for key, value in result.items():
-        logger.info('{:15s}: {}'.format(str(key), value))
 
 
 if __name__ == '__main__':
@@ -55,7 +50,10 @@ if __name__ == '__main__':
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
     options = [
         CustomArgs(['--lr', '--learning_rate'], type=float, target=('optimizer', 'args', 'lr')),
-        CustomArgs(['--bs', '--batch_size'], type=int, target=('data_loader', 'args', 'batch_size'))
+        CustomArgs(['--bs', '--batch_size'], type=int, target=('data_loader', 'args', 'batch_size')),
+        CustomArgs(['--et', '--embedder_type'], type=str, target=('arch', 'args', 'embedder_type')),
+        CustomArgs(['--sr', '--sampling_rate'], type=float, target=('arch', 'args', 'sampling_rate')),
+        CustomArgs(['--kr', '--keep_rate'], type=float, target=('arch', 'args', 'keep_rate'))
     ]
     config = ConfigParser(args, options)
     # prepare_environment(Params({'random_seed': 1, 'numpy_seed': 1, 'pytorch_seed': 1}))

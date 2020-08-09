@@ -8,51 +8,9 @@ from allennlp.training.metrics.metric import Metric
 
 
 class NERF1Metric(Metric):
-    """Compute precision, recall, F-measure and support for each class.
-
-    The precision is the ratio ``tp / (tp + fp)`` where ``tp`` is the number of
-    true positives and ``fp`` the number of false positives. The precision is
-    intuitively the ability of the classifier not to label as positive a sample
-    that is negative.
-
-    The recall is the ratio ``tp / (tp + fn)`` where ``tp`` is the number of
-    true positives and ``fn`` the number of false negatives. The recall is
-    intuitively the ability of the classifier to find all the positive samples.
-
-    The F-beta score can be interpreted as a weighted harmonic mean of
-    the precision and recall, where an F-beta score reaches its best
-    value at 1 and worst score at 0.
-
-    If we have precision and recall, the F-beta score is simply:
-    ``F-beta = (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)``
-
-    The F-beta score weights recall more than precision by a factor of
-    ``beta``. ``beta == 1.0`` means recall and precision are equally important.
-
-    The support is the number of occurrences of each class in ``y_true``.
-
-    Parameters
-    ----------
-    beta : ``float``, optional (default = 1.0)
-        The strength of recall versus precision in the F-score.
-
-    average : string, [None (default), 'micro', 'macro']
-        If ``None``, the scores for each class are returned. Otherwise, this
-        determines the type of averaging performed on the data:
-
-        ``'micro'``:
-            Calculate metrics globally by counting the total true positives,
-            false negatives and false positives.
-        ``'macro'``:
-            Calculate metrics for each label, and find their unweighted mean.
-            This does not take label imbalance into account.
-
-    labels: list, optional
-        The set of labels to include and their order if ``average is None``.
-        Labels present in the data can be excluded, for example to calculate a
-        multi-class average ignoring a majority negative class. Labels not present
-        in the data will result in 0 components in a macro average.
-
+    """
+    micro averaged F1 metric
+    excluding tag "O"
     """
 
     def __init__(self) -> None:
@@ -106,7 +64,7 @@ class NERF1Metric(Metric):
 
         if mask is None:
             mask = torch.ones_like(gold_labels)
-        mask = mask.to(torch.uint8)
+        mask = mask.to(torch.bool)
         gold_labels = gold_labels.float()
 
         argmax_predictions = predictions.max(dim=-1)[1].float()
@@ -175,9 +133,9 @@ class NERF1Metric(Metric):
         if reset:
             self.reset()
         return {
-            "precision": precision.item(),
-            "recall": recall.item(),
-            "fscore": fscore.item()
+            "avg_precision": precision.item(),
+            "avg_recall": recall.item(),
+            "avg_fscore": fscore.item()
         }
 
     @overrides

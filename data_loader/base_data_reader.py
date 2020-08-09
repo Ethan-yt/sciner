@@ -13,19 +13,19 @@ from allennlp.data.iterators import BasicIterator
 
 
 class BaseDataReader(DatasetReader):
-    def __init__(self, data_dir, batch_size: int, shuffle=False, small_data=False, test=False, max_span_width=8,
-                 output_type="bio", use_neg_sampling=False, train_name='train.json',
-                 dev_name='dev.json', test_name='test.json'):
+    def __init__(self, data_dir, batch_size: int, shuffle=False, small_data=False,
+                 train_name='train.json',
+                 dev_name='dev.json',
+                 test_name='test.json'):
         super().__init__()
-
-        self._max_span_width = max_span_width
-        self._use_neg_sampling = use_neg_sampling
-        self._output_type = output_type
-
+        self.data_dir = data_dir
+        print('loading dataset: ' + os.path.join(data_dir, train_name))
         self.train_dataset = self.read(os.path.join(data_dir, train_name))
+        print('loading val dataset: ' + os.path.join(data_dir, dev_name))
         self.validation_dataset = self.read(os.path.join(data_dir, dev_name))
         self.vocab = Vocabulary.from_instances(self.train_dataset + self.validation_dataset)
-        self.test_dataset = self.read(os.path.join(data_dir, test_name)) if test else None
+        print('loading test dataset:' + os.path.join(data_dir, test_name))
+        self.test_dataset = self.read(os.path.join(data_dir, test_name))
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.small_data = small_data

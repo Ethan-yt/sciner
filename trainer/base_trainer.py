@@ -61,12 +61,19 @@ class BaseTrainer:
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def _test_epoch(self):
+        """
+        Training logic for an epoch
+
+        :param epoch: Current epoch number
+        """
+        raise NotImplementedError
+
     def train(self):
         """
         Full training logic
         """
-        history = []
-
         for epoch in range(self.start_epoch, self.epochs + 1):
             result = self._train_epoch(epoch)
 
@@ -92,7 +99,6 @@ class BaseTrainer:
                     self.mnt_mode = 'off'
                     improved = False
                     not_improved_count = 0
-                history.append(log[self.mnt_metric])
                 if improved:
                     self.mnt_best = log[self.mnt_metric]
                     self.best_log = log
@@ -104,8 +110,8 @@ class BaseTrainer:
                 if not_improved_count > self.early_stop:
                     break
 
-            if epoch % self.save_period == 0:
-                self._save_checkpoint(epoch, save_best=best)
+            # if epoch % self.save_period == 0:
+            #     self._save_checkpoint(epoch, save_best=best)
 
         self.logger.info("Validation performance didn\'t improve for {} epochs. "
                          "Training stops.".format(self.early_stop))
@@ -116,7 +122,9 @@ class BaseTrainer:
             best_path = str(self.checkpoint_dir / 'model_best.pth')
             self.logger.info("Saving current best: " + best_path)
             torch.save(self.best_state, best_path)
-            self.logger.info(history)
+            test_log = self._test_epoch()
+            for key, value in test_log.items():
+                self.logger.info('    {:15s}: {}'.format(str(key), value))
 
     def _prepare_device(self, n_gpu_use):
         """

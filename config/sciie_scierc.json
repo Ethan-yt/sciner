@@ -1,26 +1,24 @@
 {
-  "name": "span_ner_elmo",
+  "name": "sciie_scierc",
   "n_gpu": 1,
   "arch": {
     "type": "SCIIE",
     "args": {
-      "embedder_type": "elmo_and_glove",
-      "embedding_dim": 300,
+      "embedder_type": "bert",
+      "embedding_dim": 768,
       "feature_size": 200,
-      "lexical_dropout": 0.5,
-      "mlp_dropout": 0.4,
-      "max_span_width": 8,
+      "lexical_dropout": 0.1,
+      "mlp_dropout": 0.1,
+      "max_span_width": 12,
       "spans_per_word": 0.4
     }
   },
   "data_loader": {
-    "type": "SciercDataReader",
+    "type": "SpanDataReader",
     "args": {
-      "output_type": "span",
-      "use_elmo": true,
-      "max_span_width": 8,
+      "max_span_width": 12,
       "data_dir": "data/scierc",
-      "batch_size": 20,
+      "batch_size": 5,
       "shuffle": true,
       "small_data": false
     }
@@ -28,24 +26,24 @@
   "optimizer": {
     "type": "Adam",
     "args": {
-      "lr": 1e-3,
+      "lr": 2e-5,
       "weight_decay": 0
     }
   },
   "lr_scheduler": {
-    "type": "StepLR",
+    "type": "WarmupLinearSchedule",
     "args": {
-      "step_size": 50,
-      "gamma": 0.1
+      "warmup_steps": 10,
+      "t_total": 100
     }
   },
   "trainer": {
-    "epochs": 100,
+    "epochs": 150,
     "clip": 5,
     "save_dir": "saved/",
     "save_period": 1,
     "verbosity": 2,
-    "monitor": "max fscore2",
+    "monitor": "max avg_fscore",
     "early_stop": 10,
     "tensorboard": false
   }

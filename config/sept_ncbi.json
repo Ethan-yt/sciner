@@ -1,29 +1,26 @@
 {
-  "name": "sept",
+  "name": "sept_ncbi",
   "n_gpu": 1,
   "arch": {
     "type": "SEPT",
     "args": {
-      "embedder_type": "bert",
+      "embedder_type": "biobert",
       "embedding_dim": 768,
       "feature_size": 500,
       "lexical_dropout": 0.1,
       "mlp_dropout": 0.1,
       "max_span_width": 12,
-      "spans_per_word": 0.4,
-      "sampling_rate": 0.05
+      "sampling_rate": 0.1
     }
   },
   "data_loader": {
-    "type": "BertSciercDataReader",
+    "type": "SpanDataReader",
     "args": {
-      "output_type": "span",
-      "max_span_width": 12,
-      "data_dir": "data/scierc",
+      "max_span_width": 10,
+      "data_dir": "data/NCBI-disease",
       "batch_size": 5,
       "shuffle": true,
-      "small_data": false,
-      "use_neg_sampling": true
+      "small_data": false
     }
   },
   "optimizer": {
@@ -46,7 +43,7 @@
     "save_dir": "saved/",
     "save_period": 1,
     "verbosity": 2,
-    "monitor": "max fscore2",
+    "monitor": "max avg_fscore",
     "early_stop": 10,
     "tensorboard": false
   }

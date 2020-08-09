@@ -44,19 +44,12 @@ class Trainer(BaseTrainer):
         self.model.train()
 
         total_loss = 0
-        # total_metrics = np.zeros(len(self.metrics))
         for batch_idx, data in enumerate(self.train_iter):
             self.optimizer.zero_grad()
 
             output = self._run_model(data)
             loss = output['loss']
             loss.backward()
-            # print('\n'.join([f"{name}, {param.grad.sum().item()}" for name, param in self.model.named_parameters() if param.grad is not None]))
-            # print(sum([param.grad.sum().item() for name, param in self.model.named_parameters() if param.grad is not None]))
-            # exit()
-            # if self.clip:
-            #     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
-
             self.optimizer.step()
 
             self.writer.set_step((epoch - 1) * self.train_num_batches + batch_idx)
@@ -76,6 +69,9 @@ class Trainer(BaseTrainer):
 
         val_log = self._valid_epoch(epoch)
         metrics.update(val_log)
+
+        # test_log = self._test_epoch()
+        # metrics.update(test_log)
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
@@ -111,20 +107,39 @@ class Trainer(BaseTrainer):
         for name, p in self.model.named_parameters():
             self.writer.add_histogram(name, p, bins='auto')
 
-        # val_metrics = [m / self.valid_num_batches for m in total_val_metrics]
         metrics = self.model.get_metrics(True)
+        # metrics = {"val" + k: v for k, v in metrics.items()}
         metrics.update({
             'val_loss': total_val_loss / self.valid_num_batches,
         })
 
-        def to_str(tensor, namespace):
-            if isinstance(tensor, torch.Tensor):
-                tensor = tensor.detach().cpu().numpy()
-            return [self.model.vocab.get_token_from_index(i, namespace) for i in tensor]
+        return metrics
 
-        # print(to_str(data[0]['sentences']['tokens'][0][0], 'tokens'))
-        # print(to_str(data[0]['ner_bio'][0][0], 'ner_bio_labels'))
-        # print(to_str(output['tags'][0], 'ner_bio_labels'))
+    def _test_epoch(self):
+        """
+        Validate after training an epoch
+
+        :return: A log that contains information about validation
+
+        Note:
+            The validation metrics in log must have the key 'val_metrics'.
+        """
+        self.valid_iter, self.valid_num_batches = self.data_loader.get_iterator_and_num_batches('test')
+        self.valid_iter = lazy_groups_of(self.valid_iter, self.n_gpu_use)
+
+        self.model.eval()
+        total_val_loss = 0
+        with torch.no_grad():
+            for batch_idx, data in enumerate(self.valid_iter):
+                output = self._run_model(data)
+                loss = output['loss']
+                total_val_loss += loss.item()
+
+        metrics = self.model.get_metrics(True)
+        metrics.update({
+            'test_loss': total_val_loss / self.valid_num_batches,
+        })
+
         return metrics
 
     def _progress(self, batch_idx):
@@ -163,7 +178,8 @@ class Trainer(BaseTrainer):
                                 "checkpoint. This may yield an exception while state_dict is being loaded.")
 
         model_state_dict = self.model.state_dict()
-        pretrained_dict = {k: v for k, v in checkpoint['state_dict'].items() if k in model_state_dict and model_state_dict[k].shape == v.shape}
+        pretrained_dict = {k: v for k, v in checkpoint['state_dict'].items() if
+                           k in model_state_dict and model_state_dict[k].shape == v.shape}
         model_state_dict.update(pretrained_dict)
         self.model.load_state_dict(model_state_dict)
 

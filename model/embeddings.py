@@ -14,7 +14,7 @@ from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from model.bert.bert_embedder import BertEmbedder
 import torchtext.vocab
 
-valid_embedders = ['random', 'glove', 'elmo', 'bert', 'elmo_and_glove']
+valid_embedders = ['random', 'glove', 'elmo', 'elmo_and_glove', 'bert', 'biobert', 'scibert']
 
 
 def load_glove_weights(vocab):
@@ -30,7 +30,7 @@ def load_glove_weights(vocab):
     return weights
 
 
-def get_embeddings(embedder_type, vocab, embedding_dim, bert_trainable=True):
+def get_embeddings(embedder_type, vocab, embedding_dim=300, bert_trainable=True):
     if embedder_type not in valid_embedders:
         raise Exception(f'Unknown embedder type {embedder_type}')
     vocab_size = vocab.get_vocab_size('tokens')
@@ -48,8 +48,8 @@ def get_embeddings(embedder_type, vocab, embedding_dim, bert_trainable=True):
                                                 'embeddings/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5',
                                                 do_layer_norm=False, dropout=0.5)
         token_embedders['elmo'] = elmo_token_embedder
-    if 'bert' == embedder_type:
-        token_embedders['bert'] = BertEmbedder(trainable=bert_trainable)
+    if 'bert' in embedder_type:
+        token_embedders['bert'] = BertEmbedder(bert_type=embedder_type, trainable=bert_trainable)
 
     word_embeddings = BasicTextFieldEmbedder(token_embedders)
     return word_embeddings
